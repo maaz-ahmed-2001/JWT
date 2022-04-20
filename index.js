@@ -7,10 +7,17 @@ const jsonParser = bodyParser.json()
 const bcrpyt = require("bcrypt")
 const jwt = require("jsonwebtoken")
 const Token = require("./model/Token")
+const dotenv = require("dotenv")
+
+dotenv.config()
+
+const SECRET_KEY = process.env.SECRET_KEY
+// const crypto = require('crypto')
+// const randomBytes = crypto.randomBytes
+// const SECRETE_KEY = randomBytes(64).toString("hex")
+// console.log(SECRETE_KEY)
 
 
-
-jwtkey = "jwt"
 
 mongoose.connect("mongodb+srv://maaz:azamhamed0@cluster0.biaxw.mongodb.net/jwtTest?retryWrites=true&w=majority",{
     useNewUrlParser: true,
@@ -25,15 +32,14 @@ const checkToken = async(req,res,next) => {
     const bearerHeader = req.headers["authorization"]
     console.log(bearerHeader)
     if(typeof bearerHeader !== "undefined"){
-        jwt.verify(bearerHeader,jwtkey, (err, auth)=>{
+        jwt.verify(bearerHeader,SECRET_KEY, (err, auth)=>{
             if(err){
                 res.json(err)
                 res.end()
             } else next()
         })
-    } else{
-        res.end("Token not found")
-    }
+    } else res.end("Token not found")
+    
 }
 
 const makePassword = async (password) => {
@@ -59,11 +65,9 @@ app.post("/register",jsonParser,async(req,res)=>{
         password: finalPass
     })
     result = await data.save()
-    jwt.sign({result}, jwtkey, { expiresIn: "10s"},(err,token)=>{
+    jwt.sign({result}, SECRET_KEY, { expiresIn: "10s"},(err,token)=>{
         res.status(201).json({token})
     })
-    
-    
 })
 
 app.post("/login",jsonParser,async(req,res)=>{
@@ -72,24 +76,21 @@ app.post("/login",jsonParser,async(req,res)=>{
     if(reqUser){
         let isVerified = await matchPassword(password,reqUser.password)
         if(isVerified){
-
-            let token = jwt.sign({reqUser},jwtkey,{expiresIn:"30s"})
+            let token = jwt.sign({reqUser},SECRET_KEY,{expiresIn:"30s"})
             let newToken = new Token({
                 token,
                 userId: reqUser._id 
             })
             await newToken.save()
-            console.log(token)
-            res.json({token})
-
-            
-            
+            // console.log(token)
+            res.json({token}) 
         }
-        else{
-            res.end("no user")
-        }
+        else res.end("no user")
+        
     }
 })
+
+
 
 app.get("/all-users",checkToken,async(req,res)=>{
     let result = await User.find()
@@ -99,8 +100,6 @@ app.get("/all-users",checkToken,async(req,res)=>{
         res.end("not authenticated")
     }
 })
-
-
 
 
 
